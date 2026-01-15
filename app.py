@@ -47,8 +47,8 @@ st.markdown("""
 
 @st.cache_data
 def load_data():
-    """Carga los datos del archivo Parquet con autores"""
-    parquet_path = "analisis_2025_con_autores.parquet"
+    """Carga los datos completos del archivo Parquet"""
+    parquet_path = "analisis_2025_completo.parquet"
     if not os.path.exists(parquet_path):
         st.error(f"❌ No se encontró el archivo: {parquet_path}")
         st.info("Dataset no encontrado")
