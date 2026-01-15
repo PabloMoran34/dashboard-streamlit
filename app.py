@@ -47,8 +47,8 @@ st.markdown("""
 
 @st.cache_data
 def load_data():
-    """Carga los datos completos del archivo Parquet"""
-    parquet_path = "analisis_2025_completo.parquet"
+    """Carga los datos sin dimensión de autor (optimizado)"""
+    parquet_path = "analisis_2025_sin_autor.parquet"
     if not os.path.exists(parquet_path):
         st.error(f"❌ No se encontró el archivo: {parquet_path}")
         st.info("Dataset no encontrado")
@@ -144,13 +144,8 @@ def main():
         key='selected_categories'
     )
     
-    # Filtro de autores (top por ventas)
-    top_authors = df.groupby('autor')['ventas'].sum().nlargest(50).index.tolist()
-    selected_authors = st.sidebar.multiselect(
-        "Autores (Top 50 por ventas)",
-        options=top_authors,
-        default=[]
-    )
+    # Nota sobre optimización
+    st.sidebar.info("ℹ️ Dataset optimizado sin dimensión de autor (141K filas, 0.8MB)")
     
     # Aplicar filtros
     df_filtered = df[
@@ -160,9 +155,6 @@ def main():
         (df['formato'].isin(selected_formats)) &
         (df['categoria'].isin(selected_categories))
     ]
-    
-    if selected_authors:
-        df_filtered = df_filtered[df_filtered['autor'].isin(selected_authors)]
     
     st.sidebar.markdown("---")
     st.sidebar.metric("Filas totales", len(df))
@@ -200,10 +192,9 @@ def main():
     # ==========================
     # TABS DE VISUALIZACIONES
     # ==========================
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
         "📊 Evolución Temporal",
         "🎯 Por Vertical",
-        "👥 Por Autor",
         "🗂️ Por Categoría",
         "📦 Devoluciones",
         "📋 Tabla Detallada"
@@ -342,41 +333,8 @@ def main():
         fig7.update_layout(showlegend=False, height=300)
         st.plotly_chart(fig7, use_container_width=True)
     
-    # ===== TAB 3: POR AUTOR =====
+    # ===== TAB 3: POR CATEGORÍA =====
     with tab3:
-        st.subheader("Top 20 Autores por Ventas")
-        
-        autores_ventas = df_filtered.groupby('autor').agg({
-            'ventas': 'sum',
-            'cancelaciones': 'sum',
-            'stock_activo': 'sum',
-            'rotacion': 'mean'
-        }).reset_index()
-        autores_ventas = autores_ventas[autores_ventas['autor'] != 'Desconocido']
-        autores_ventas = autores_ventas.sort_values('ventas', ascending=False).head(20)
-        
-        fig8 = px.bar(
-            autores_ventas,
-            x='ventas',
-            y='autor',
-            orientation='h',
-            title="Top 20 Autores"
-        )
-        fig8.update_layout(height=600, yaxis={'categoryorder': 'total ascending'})
-        st.plotly_chart(fig8, use_container_width=True)
-        
-        # Tabla de autores con métricas
-        st.subheader("Métricas Detalladas - Top 20")
-        autores_display = autores_ventas.copy()
-        autores_display['rotacion'] = autores_display['rotacion'].round(3)
-        st.dataframe(
-            autores_display,
-            use_container_width=True,
-            hide_index=True
-        )
-    
-    # ===== TAB 4: POR CATEGORÍA =====
-    with tab4:
         st.subheader("Top 15 Categorías por Ventas")
         
         categorias_ventas = df_filtered.groupby('categoria').agg({
@@ -413,8 +371,8 @@ def main():
             fig10.update_layout(height=500, yaxis={'categoryorder': 'total ascending'})
             st.plotly_chart(fig10, use_container_width=True)
     
-    # ===== TAB 5: DEVOLUCIONES =====
-    with tab5:
+    # ===== TAB 4: DEVOLUCIONES =====
+    with tab4:
         st.subheader("Análisis de Devoluciones")
         
         col1, col2 = st.columns(2)
@@ -517,13 +475,13 @@ def main():
         fig_dev4.update_layout(height=500, yaxis={'categoryorder': 'total ascending'})
         st.plotly_chart(fig_dev4, use_container_width=True)
     
-    # ===== TAB 6: TABLA DETALLADA =====
-    with tab6:
+    # ===== TAB 5: TABLA DETALLADA =====
+    with tab5:
         st.subheader("Datos Detallados")
         
         # Selector de columnas
         all_columns = df_filtered.columns.tolist()
-        default_columns = ['mes', 'vertical', 'idioma', 'formato', 'categoria', 'autor', 
+        default_columns = ['mes', 'vertical', 'idioma', 'formato', 'categoria', 
                           'ventas', 'stock_activo', 'rotacion', 'precio_medio_venta']
         
         selected_columns = st.multiselect(
@@ -691,7 +649,7 @@ def main():
             filters_applied.append(f"ratio cancel <= {max_ratio_cancel:.0%}")
         
         # Identificar columnas categóricas y numéricas en la selección
-        categorical_cols = ['mes', 'vertical', 'idioma', 'formato', 'categoria', 'autor']
+        categorical_cols = ['mes', 'vertical', 'idioma', 'formato', 'categoria']
         selected_categorical = [col for col in selected_columns if col in categorical_cols]
         selected_numeric = [col for col in selected_columns if col not in categorical_cols]
         
